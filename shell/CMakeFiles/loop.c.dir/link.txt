@@ -1,0 +1,2 @@
+/usr/bin/ar qc lib./loop.c.a  CMakeFiles/./loop.c.dir/seush.o
+/usr/bin/ranlib lib./loop.c.a

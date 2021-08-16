@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/z3nith/OS_labs/seush/loop.c
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+unistd.h
+-
+macros.h
+/home/z3nith/OS_labs/seush/macros.h
+
+/home/z3nith/OS_labs/seush/macros.h
+

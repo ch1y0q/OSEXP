@@ -1,0 +1,3 @@
+/home/z3nith/OS_labs/seush/CMakeFiles/rebuild_cache.dir
+/home/z3nith/OS_labs/seush/CMakeFiles/edit_cache.dir
+/home/z3nith/OS_labs/seush/CMakeFiles/seush.dir
