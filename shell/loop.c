@@ -10,11 +10,13 @@
 #include "utilities.h"
 #include "run_command.h"
 
-void print_promt()
+
+void print_promt(struct Environment *environment)
 {
-    char *buf = new char[1024];
+    char str[2048]="";
+    char buf[1024];
     /* ANSI colored string: green */
-    char *str="\e[32;40m ";
+    strcat(str, "\e[32;40m");
     /* get username */
     if(getlogin_r(buf, 1024)){
         PRINT_ERROR_MESSAGE;
@@ -34,26 +36,26 @@ void print_promt()
     
     /* append cwd in red */
     strcat(str, "\033[0;31m");
-    strcat(str, environment.cwd);
+    strncat(str, environment->cwd, MAX_PATH);
 
     if(geteuid() != 0)  /* not root */
     {
-      strcat(str, "\033[0m:$ ");
+      strcat(str, "\033[0m$ ");
     }
     else{
-      strcat(str, "\033[0m:# ");
+      strcat(str, "\033[0m# ");
     }
 
     WOUT(str);
 }
 
-char *getNextLine(FILE *batchFile)
+char *getNextLine(FILE *batchFile, struct Environment* environment)
 {
     char *line = NULL;
     size_t len = 0;
     if (batchFile == NULL)  /* read from stdin */
     {
-        print_promt();
+        print_promt(environment);
         while (getline(&line, &len, stdin) == -1)
         {
             /* wait for input */
@@ -70,7 +72,7 @@ char *getNextLine(FILE *batchFile)
 void run_shell(char *batch)
 {
     /* initialize environment */
-    Environment environment;
+    struct Environment environment;
     environment.paths[0] = strdup(DEFAULT_PATHS);
     environment.paths[1] = strdup("\0");
     environment.cwd[0] = '.';
@@ -94,9 +96,9 @@ void run_shell(char *batch)
     char *line;
     while (TRUE)
     {
-        line = getNextLine(batchFile);
+        line = getNextLine(batchFile, &environment);
 #ifdef DEBUG
-        //printf("%s\n", line);
+        printf("%s\n", line);
 #endif
 
         if (line == NULL || line[0] == '\0')
@@ -126,7 +128,7 @@ void run_shell(char *batch)
         {
             if (line[4] == '\0')
             {
-                write(STDOUT_FILENO, "A simple shell.\n", strlen("A simple shell.\n"));
+                WOUT("A simple shell.\n");
             }
             else
             {
