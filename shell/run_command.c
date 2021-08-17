@@ -20,18 +20,26 @@ void run_command(char *line, Environment *environment)
 
 void parse_command(char *line, Environment *environment)
 {
-    //struct Process process[MAX_PIDS] = {0}; /* TROUBLESHOOTING: must initialize or will reuse */
-    struct Process *process = malloc(sizeof(Process) * MAX_PIDS);
+    //Process process[MAX_PIDS] = {0}; /* TROUBLESHOOTING: must initialize or will reuse */
+    /* allocation and initialization of Process */
+    Process *process = malloc(sizeof(Process) * MAX_PIDS);
+    for(int _i = 0; _i < MAX_PIDS; ++_i){
+        process[_i].argc = 0;
+        process[_i].argv = NULL;
+        process[_i].exec_path = NULL;
+        process[_i].pid = -1;
+        process[_i].redirected = FALSE;
+        process[_i].redirection = -1;
+    }
     int process_num = 0;
-    char *token;
 
     /* remove redundant space and tab */
     line = clean(line);
 
     /* parse "&" */
-    char *single_commands[MAX_ARGUMENTS];
+    char **single_commands = malloc(sizeof(char*) * MAX_ARGUMENTS);
     int single_command_num = 0;
-    token = strtok(line, "&");
+    char *token = strtok(line, "&");
     while (token != NULL)
     {
         single_commands[single_command_num++] = strdup(token);
@@ -52,9 +60,10 @@ void parse_command(char *line, Environment *environment)
         cur_command = clean(cur_command);
         if (cur_command == NULL || cur_command[0] == '\0')
             continue;
+        free(cur_command);
 
         /* redirection */
-        char *redirection_sep[5];
+        char **redirection_sep = malloc(sizeof(char*) * MAX_REDIRECTION_SEP);
         int redirection_sep_num = 0;
         if (strstr(single_commands[_i], ">"))
         {
@@ -92,6 +101,7 @@ void parse_command(char *line, Environment *environment)
 
         /* arguments */
         process[process_num].argv = malloc(sizeof(char *) * MAX_ARGUMENTS);
+        process[process_num].argv[0] = '\0';
         process[process_num].argc = 0;
 
         token = strtok(redirection_sep[0], " ");
@@ -121,7 +131,11 @@ void parse_command(char *line, Environment *environment)
 #ifdef DEBUG
                 printf("proc %d %s\n", process_num, process[process_num].argv[0]);
 #endif
-                char *full_path = strdup(environment->paths[path_i]);
+                /* https://stackoverflow.com/questions/12591074
+                    /is-there-a-neat-way-to-do-strdup-followed-by-strcat */
+                char *full_path = (char*)malloc( sizeof(char) * 
+                    (strlen(environment->paths[path_i]) + MAX_EXEC_FILENAME) ) ;
+                strcpy(full_path, environment->paths[path_i]);
                 if (full_path[strlen(full_path) - 1] != '/')
                 {
                     strcat(full_path, "/");
@@ -134,15 +148,35 @@ void parse_command(char *line, Environment *environment)
                     break;
                 }
                 path_i++;
+                free(full_path);
             }
         }
 
         /* ready for a new process */
         ++process_num;
+
+        /* free memory */
+        for (int _i = 0; _i < redirection_sep_num; ++_i){
+            free(redirection_sep[_i]);
+        }
+        free(redirection_sep);
     }
 
     chdir(environment->cwd); /* test7: prevent cwd changed by external sh */
     run_processes(process, process_num);
+
+    /* free memory */
+    for (int _i = 0; _i < single_command_num; ++_i){
+        free(single_commands[_i]);
+    }
+    free(single_commands);
+    for (int _i = 0; _i < process_num; ++_i){
+        for (int _j = 0; _j < process[_i].argc; ++_j){
+            free(process[_i].argv[_j]);
+        }
+        free(process[_i].argv);
+        free(process[_i].exec_path);
+    }
     free(process);
 }
 

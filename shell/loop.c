@@ -75,8 +75,9 @@ void run_shell(char *batch)
     struct Environment environment;
     environment.paths[0] = strdup(DEFAULT_PATHS);
     environment.paths[1] = strdup("\0");
-    environment.cwd[0] = '.';
-    environment.cwd[1] = '\0';
+    getcwd(environment.cwd, MAX_CWD);
+    //environment.cwd[0] = '.';
+    //environment.cwd[1] = '\0';
     environment.path_set_by_user = FALSE;
 
     FILE *batchFile = NULL;
