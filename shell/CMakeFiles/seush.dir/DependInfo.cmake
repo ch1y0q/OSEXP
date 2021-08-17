@@ -4,10 +4,10 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "/home/z3nith/OS_labs/seush/loop.c" "/home/z3nith/OS_labs/seush/CMakeFiles/seush.dir/loop.c.o"
-  "/home/z3nith/OS_labs/seush/run_command.c" "/home/z3nith/OS_labs/seush/CMakeFiles/seush.dir/run_command.c.o"
-  "/home/z3nith/OS_labs/seush/seush.c" "/home/z3nith/OS_labs/seush/CMakeFiles/seush.dir/seush.c.o"
-  "/home/z3nith/OS_labs/seush/utilities.c" "/home/z3nith/OS_labs/seush/CMakeFiles/seush.dir/utilities.c.o"
+  "/home/qiyue2001/code/OSEXP/shell/loop.c" "/home/qiyue2001/code/OSEXP/shell/CMakeFiles/seush.dir/loop.c.o"
+  "/home/qiyue2001/code/OSEXP/shell/run_command.c" "/home/qiyue2001/code/OSEXP/shell/CMakeFiles/seush.dir/run_command.c.o"
+  "/home/qiyue2001/code/OSEXP/shell/seush.c" "/home/qiyue2001/code/OSEXP/shell/CMakeFiles/seush.dir/seush.c.o"
+  "/home/qiyue2001/code/OSEXP/shell/utilities.c" "/home/qiyue2001/code/OSEXP/shell/CMakeFiles/seush.dir/utilities.c.o"
   )
 set(CMAKE_C_COMPILER_ID "GNU")
 

@@ -26,5 +26,6 @@
 /* exit */
 #define EXIT_SUCCESS 0
 #define EXIT_BATCH_READ_ERROR 1
+#define EXIT_EXEC 2
 
 #endif

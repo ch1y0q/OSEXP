@@ -6,7 +6,9 @@
 
 #IncludeRegexTransform: 
 
-/home/z3nith/OS_labs/seush/loop.c
+/home/qiyue2001/code/OSEXP/shell/macros.h
+
+/home/qiyue2001/code/OSEXP/shell/run_command.c
 stdio.h
 -
 stdlib.h
@@ -15,24 +17,28 @@ string.h
 -
 unistd.h
 -
-dirent.h
+sys/types.h
+-
+sys/wait.h
+-
+fcntl.h
+-
+string.h
 -
 macros.h
-/home/z3nith/OS_labs/seush/macros.h
-structures.h
-/home/z3nith/OS_labs/seush/structures.h
-utilities.h
-/home/z3nith/OS_labs/seush/utilities.h
+/home/qiyue2001/code/OSEXP/shell/macros.h
 run_command.h
-/home/z3nith/OS_labs/seush/run_command.h
-
-/home/z3nith/OS_labs/seush/macros.h
-
-/home/z3nith/OS_labs/seush/run_command.h
+/home/qiyue2001/code/OSEXP/shell/run_command.h
+utilities.h
+/home/qiyue2001/code/OSEXP/shell/utilities.h
 structures.h
-/home/z3nith/OS_labs/seush/structures.h
+/home/qiyue2001/code/OSEXP/shell/structures.h
 
-/home/z3nith/OS_labs/seush/structures.h
+/home/qiyue2001/code/OSEXP/shell/run_command.h
+structures.h
+/home/qiyue2001/code/OSEXP/shell/structures.h
+
+/home/qiyue2001/code/OSEXP/shell/structures.h
 linux/limits.h
 -
 limits.h
@@ -42,7 +48,7 @@ sys/types.h
 stdio.h
 -
 macros.h
-/home/z3nith/OS_labs/seush/macros.h
+/home/qiyue2001/code/OSEXP/shell/macros.h
 
-/home/z3nith/OS_labs/seush/utilities.h
+/home/qiyue2001/code/OSEXP/shell/utilities.h
 

@@ -6,7 +6,7 @@
 void print_prompt();
 void run_shell(char *batch);
 char *getNextLine(FILE *batchFile);
-char* readline(char *prompt);
+char *readline(char *prompt);
 char *clean(char *line);
 
 #endif

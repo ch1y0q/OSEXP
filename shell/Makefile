@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/z3nith/OS_labs/seush
+CMAKE_SOURCE_DIR = /home/qiyue2001/code/OSEXP/shell
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/z3nith/OS_labs/seush
+CMAKE_BINARY_DIR = /home/qiyue2001/code/OSEXP/shell
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/z3nith/OS_labs/seush/CMakeFiles /home/z3nith/OS_labs/seush/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/qiyue2001/code/OSEXP/shell/CMakeFiles /home/qiyue2001/code/OSEXP/shell/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/z3nith/OS_labs/seush/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/qiyue2001/code/OSEXP/shell/CMakeFiles 0
 .PHONY : all
 
 # The main clean target

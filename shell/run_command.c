@@ -20,7 +20,8 @@ void run_command(char *line, Environment *environment)
 
 void parse_command(char *line, Environment *environment)
 {
-    Process process[MAX_PIDS] = {0}; /* TROUBLESHOOTING: must initialize or will reuse */
+    //struct Process process[MAX_PIDS] = {0}; /* TROUBLESHOOTING: must initialize or will reuse */
+    struct Process *process = malloc(sizeof(Process) * MAX_PIDS);
     int process_num = 0;
     char *token;
 
@@ -111,7 +112,7 @@ void parse_command(char *line, Environment *environment)
 #ifdef DEBUG
             for (int i = 0; environment->paths[i] && environment->paths[i][0] != '\0'; ++i)
             {
-                printf("Env:%d %s\n", i, environment->paths[i]);
+                printf("Env: %d %s\n", i, environment->paths[i]);
             }
 #endif
             int path_i = 0;
@@ -142,6 +143,7 @@ void parse_command(char *line, Environment *environment)
 
     chdir(environment->cwd); /* test7: prevent cwd changed by external sh */
     run_processes(process, process_num);
+    free(process);
 }
 
 /* run all processes and wait for them to finnish */
@@ -184,7 +186,7 @@ void run_processes(struct Process process[], int process_num)
             }
             execv(process[number].exec_path, process[number].argv);
             PRINT_ERROR_MESSAGE;
-            exit(1); /* something went wrong executing subprocess */
+            exit(EXIT_EXEC); /* something went wrong executing subprocess */
         }
     }
     if (pid) /* parent process */

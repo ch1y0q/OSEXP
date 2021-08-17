@@ -6,5 +6,5 @@ C_FLAGS =
 
 C_DEFINES = 
 
-C_INCLUDES = -I/home/z3nith/OS_labs/seush/. -I/home/z3nith/OS_labs/seush/include 
+C_INCLUDES = -I/home/qiyue2001/code/OSEXP/shell/. -I/home/qiyue2001/code/OSEXP/shell/include 
 

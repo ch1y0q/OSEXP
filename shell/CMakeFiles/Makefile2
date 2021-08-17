@@ -44,10 +44,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/z3nith/OS_labs/seush
+CMAKE_SOURCE_DIR = /home/qiyue2001/code/OSEXP/shell
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/z3nith/OS_labs/seush
+CMAKE_BINARY_DIR = /home/qiyue2001/code/OSEXP/shell
 
 #=============================================================================
 # Directory level rules for the build root directory
@@ -74,14 +74,14 @@ clean: CMakeFiles/seush.dir/clean
 CMakeFiles/seush.dir/all:
 	$(MAKE) -f CMakeFiles/seush.dir/build.make CMakeFiles/seush.dir/depend
 	$(MAKE) -f CMakeFiles/seush.dir/build.make CMakeFiles/seush.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/z3nith/OS_labs/seush/CMakeFiles --progress-num=1,2,3,4,5 "Built target seush"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/qiyue2001/code/OSEXP/shell/CMakeFiles --progress-num=1,2,3,4,5 "Built target seush"
 .PHONY : CMakeFiles/seush.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/seush.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/z3nith/OS_labs/seush/CMakeFiles 5
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/qiyue2001/code/OSEXP/shell/CMakeFiles 5
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/seush.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/z3nith/OS_labs/seush/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/qiyue2001/code/OSEXP/shell/CMakeFiles 0
 .PHONY : CMakeFiles/seush.dir/rule
 
 # Convenience name for target.

@@ -1,1 +1,0 @@
-/usr/bin/cc   -rdynamic CMakeFiles/loop.dir/loop.o  -o loop 

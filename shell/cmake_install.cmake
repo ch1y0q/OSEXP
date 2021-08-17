@@ -1,4 +1,4 @@
-# Install script for directory: /home/z3nith/OS_labs/seush
+# Install script for directory: /home/qiyue2001/code/OSEXP/shell
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/z3nith/OS_labs/seush/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/qiyue2001/code/OSEXP/shell/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
