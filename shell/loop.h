@@ -3,6 +3,7 @@
 #ifndef LOOP_H
 #define LOOP_H
 
+void print_prompt();
 void run_shell(char *batch);
 char *getNextLine(FILE *batchFile);
 char* readline(char *prompt);

@@ -10,19 +10,56 @@
 #include "utilities.h"
 #include "run_command.h"
 
+void print_promt()
+{
+    char *buf = new char[1024];
+    /* ANSI colored string: green */
+    char *str="\e[32;40m ";
+    /* get username */
+    if(getlogin_r(buf, 1024)){
+        PRINT_ERROR_MESSAGE;
+    }
+    strcat(str, buf);
+
+    strcat(str, "@");
+
+    /* get hostname */
+    if(gethostname(buf, 1024)){
+        PRINT_ERROR_MESSAGE;
+    }
+    strcat(str, buf);
+    
+    /* append a colon in white */
+    strcat(str, "\033[0m:");
+    
+    /* append cwd in red */
+    strcat(str, "\033[0;31m");
+    strcat(str, environment.cwd);
+
+    if(geteuid() != 0)  /* not root */
+    {
+      strcat(str, "\033[0m:$ ");
+    }
+    else{
+      strcat(str, "\033[0m:# ");
+    }
+
+    WOUT(str);
+}
+
 char *getNextLine(FILE *batchFile)
 {
     char *line = NULL;
     size_t len = 0;
-    if (batchFile == NULL)
+    if (batchFile == NULL)  /* read from stdin */
     {
-        write(STDOUT_FILENO, "seush>", strlen("seush>"));
+        print_promt();
         while (getline(&line, &len, stdin) == -1)
         {
             /* wait for input */
         };
     }
-    else if (getline(&line, &len, batchFile) == -1)
+    else if (getline(&line, &len, batchFile) == -1) /* read next line from batch file*/
     {
         free(line);
         return NULL;
@@ -47,10 +84,13 @@ void run_shell(char *batch)
         if (batchFile == NULL)
         {
             PRINT_ERROR_MESSAGE;
-            exit(1);
+            exit(EXIT_BATCH_READ_ERROR);
         }
     }
 
+    /*====================================*/
+    /*             MAIN  LOOP             */
+    /*====================================*/
     char *line;
     while (TRUE)
     {
@@ -75,7 +115,18 @@ void run_shell(char *batch)
             if (line[4] == '\0')
             {
                 free(line);
-                exit(0);
+                exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                PRINT_ERROR_MESSAGE;
+            }
+        }
+        else if (strncmp(line, "help", 4) == 0)
+        {
+            if (line[4] == '\0')
+            {
+                write(STDOUT_FILENO, "A simple shell.\n", strlen("A simple shell.\n"));
             }
             else
             {

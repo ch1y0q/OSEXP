@@ -23,4 +23,8 @@
 #define MAX_ARGUMENTS 100
 #define DEFAULT_PATHS "/bin"
 
+/* exit */
+#define EXIT_SUCCESS 0
+#define EXIT_BATCH_READ_ERROR 1
+
 #endif
