@@ -28,8 +28,9 @@ void parse_command(char *line, Environment *environment)
         process[_i].argv = NULL;
         process[_i].exec_path = NULL;
         process[_i].pid = -1;
-        process[_i].redirected = FALSE;
-        process[_i].redirection = -1;
+        process[_i].redirected = NO_REDI;
+        process[_i].redi_infd = -1;
+        process[_i].redi_outfd = -1;
     }
     int process_num = 0;
 
@@ -37,7 +38,7 @@ void parse_command(char *line, Environment *environment)
     line = clean(line);
 
     /* parse "&" */
-    char **single_commands = malloc(sizeof(char*) * MAX_ARGUMENTS);
+    char **single_commands = malloc(sizeof(char*) * MAX_ARGUMENTS_NUM);
     int single_command_num = 0;
     char *token = strtok(line, "&");
     while (token != NULL)
@@ -63,48 +64,44 @@ void parse_command(char *line, Environment *environment)
         free(cur_command);
 
         /* redirection */
-        char **redirection_sep = malloc(sizeof(char*) * MAX_REDIRECTION_SEP);
-        int redirection_sep_num = 0;
-        if (strstr(single_commands[_i], ">"))
-        {
+        char command_noredi[MAX_COMMAND_NOREDI];
+        char redi_outfile[MAX_REDIFILE];
+        char redi_infile[MAX_REDIFILE];
+        enum REDIRECTION_TYPE redi_type;
 
-            token = strtok(single_commands[_i], ">");
-            while (token != NULL)
-            {
-                redirection_sep[redirection_sep_num++] = strdup(token);
-                token = strtok(NULL, ">");
-            }
 
-            if (redirection_sep_num == 2) /* redirected */
-            {
-                redirection_sep[1] = clean(redirection_sep[1]);
-                if (strstr(redirection_sep[1], " ")) /* only one dest allowed */
-                {
-                    PRINT_ERROR_MESSAGE;
-                    return;
-                }
-
-                process[process_num].redirected = TRUE;
-                process[process_num].redirection = open(redirection_sep[1], O_WRONLY | O_CREAT, 0666);
-            }
-            else /* there can be only one ">" */
-            {
-                PRINT_ERROR_MESSAGE;
-                return;
-            }
+        if(3 == sscanf(single_commands[_i], "%[^\t\n<>] > %[^\t\n<>] < %[^\t\n<>]",
+                     command_noredi, redi_outfile, redi_infile)){
+            redi_type = REDI_OUT_IN;
         }
-        else
-        {
-            process[process_num].redirected = FALSE;
-            redirection_sep[redirection_sep_num++] = strdup(single_commands[_i]);
+        else if(3 == sscanf(single_commands[_i], "%[^\t\n<>] < %[^\t\n<>] > %[^\t\n<>]",
+                     command_noredi, redi_infile, redi_outfile)){
+            redi_type = REDI_IN_OUT;
+        }
+        else if(2 == sscanf(single_commands[_i], "%[^\t\n<>] < %[^\t\n<>]", command_noredi, redi_infile)){
+            redi_type = REDI_IN;
+        }
+        else if(2 == sscanf(single_commands[_i], "%[^\t\n<>] > %[^\t\n<>]", command_noredi, redi_outfile)){
+            redi_type = REDI_OUT;
+        }
+        else{
+            redi_type = NO_REDI;
+        }
+
+        process[process_num].redirected=redi_type;
+        if(redi_type & REDI_OUT_MASK){
+            process[process_num].redi_outfd = open(redi_outfile, O_WRONLY | O_CREAT, 0666);
+        }
+        if(redi_type & REDI_IN_MASK){
+            process[process_num].redi_infd = open(redi_infile, O_RDONLY, 0444);
         }
 
         /* arguments */
-        process[process_num].argv = malloc(sizeof(char *) * MAX_ARGUMENTS);
+        process[process_num].argv = malloc(sizeof(char *) * MAX_ARGUMENTS_NUM);
         process[process_num].argv[0] = '\0';
         process[process_num].argc = 0;
 
-        token = strtok(redirection_sep[0], " ");
+        token = strtok(clean(command_noredi), " ");
         while (token != NULL)
         {
             process[process_num].argv[process[process_num].argc++] = strdup(token);
@@ -156,10 +153,7 @@ void parse_command(char *line, Environment *environment)
         ++process_num;
 
         /* free memory */
-        for (int _i = 0; _i < redirection_sep_num; ++_i){
-            free(redirection_sep[_i]);
-        }
-        free(redirection_sep);
+
     }
 
     chdir(environment->cwd); /* test7: prevent cwd changed by external sh */
@@ -202,24 +196,41 @@ void run_processes(struct Process process[], int process_num)
         else if (pid == 0)
         { /* forked process */
 #ifdef DEBUG
-            printf("pid: %d pgrp: %d\n", getpid(), getpgrp());
+            printf("pid: %d pgrp: %d redi_type: %d\n", getpid(), getpgrp(), process[number].redirected);
 #endif
-            if (process[number].redirected)
+            if (process[number].redirected & REDI_OUT_MASK)
             { /* handle redirection */
-                if (-1 == dup2(process[number].redirection, fileno(stderr)))
+                if (-1 == dup2(process[number].redi_outfd, fileno(stderr)))
                 {
                     PRINT_ERROR_MESSAGE;
                     exit(1);
                 }
                 /* close(1)  i.e. STDOUT is done by dup2 */
-                if (-1 == dup2(process[number].redirection, fileno(stdout)))
+                if (-1 == dup2(process[number].redi_outfd, fileno(stdout)))
                 {
+                    PRINT_ERROR_MESSAGE;
+                    exit(1);
+                }
+                #ifdef DEBUG
+                    printf("dup2 stdout and stderr...\n");
+                #endif
+            }
+            if (process[number].redirected & REDI_IN_MASK)
+            { /* handle redirection */
+                if (-1 == dup2(process[number].redi_infd, fileno(stdin)))
+                {
+                    #ifdef DEBUG
+                    printf("dup2 stdin...\n");
+                    #endif
                     PRINT_ERROR_MESSAGE;
                     exit(1);
                 }
             }
             execv(process[number].exec_path, process[number].argv);
             PRINT_ERROR_MESSAGE;
+            #ifdef DEBUG
+            printf("execv didn't work.\n");
+            #endif
             exit(EXIT_EXEC); /* something went wrong executing subprocess */
         }
     }

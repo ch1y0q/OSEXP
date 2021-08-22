@@ -21,8 +21,10 @@
 #define MAX_PATH 100     /* max length of a path */
 #define MAX_PATH_NUM 100 /* max number of paths */
 #define MAX_PIDS 500
-#define MAX_ARGUMENTS 100
-#define MAX_CWD 500
+#define MAX_ARGUMENTS_NUM 100
+#define MAX_CWD 300
+#define MAX_COMMAND_NOREDI 200
+#define MAX_REDIFILE 200
 #define MAX_REDIRECTION_SEP 5
 #define MAX_EXEC_FILENAME 300
 #define DEFAULT_PATHS "/bin"
