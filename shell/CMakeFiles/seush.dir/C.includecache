@@ -6,9 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/qiyue2001/code/OSEXP/shell/macros.h
-
-/home/qiyue2001/code/OSEXP/shell/run_command.c
+/home/qiyue2001/code/OSEXP/shell/loop.c
 stdio.h
 -
 stdlib.h
@@ -17,22 +15,18 @@ string.h
 -
 unistd.h
 -
-sys/types.h
--
-sys/wait.h
--
-fcntl.h
--
-string.h
+dirent.h
 -
 macros.h
 /home/qiyue2001/code/OSEXP/shell/macros.h
-run_command.h
-/home/qiyue2001/code/OSEXP/shell/run_command.h
-utilities.h
-/home/qiyue2001/code/OSEXP/shell/utilities.h
 structures.h
 /home/qiyue2001/code/OSEXP/shell/structures.h
+utilities.h
+/home/qiyue2001/code/OSEXP/shell/utilities.h
+run_command.h
+/home/qiyue2001/code/OSEXP/shell/run_command.h
+
+/home/qiyue2001/code/OSEXP/shell/macros.h
 
 /home/qiyue2001/code/OSEXP/shell/run_command.h
 structures.h

@@ -17,6 +17,7 @@
 #define PRINT_ERROR_MESSAGE WERR("An error has occurred\n")
 
 /* environment */
+#define MAX_STRCMP_N 1000
 #define MAX_PATH 100     /* max length of a path */
 #define MAX_PATH_NUM 100 /* max number of paths */
 #define MAX_PIDS 500

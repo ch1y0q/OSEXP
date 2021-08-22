@@ -113,30 +113,18 @@ void run_shell(char *batch)
         line = clean(line);
 
         /* built-in commands */
-        if (strncmp(line, "exit", 4) == 0)
+        /* not to run in parallel */
+        if (strncmp(line, "exit", MAX_STRCMP_N) == 0)
         {
-            if (line[4] == '\0')
-            {
-                free(line);
-                exit(EXIT_SUCCESS);
-            }
-            else
-            {
-                PRINT_ERROR_MESSAGE;
-            }
+            free(line);
+            exit(EXIT_SUCCESS);
         }
-        else if (strncmp(line, "help", 4) == 0)
+        else if (strncmp(line, "help", MAX_STRCMP_N) == 0)
         {
-            if (line[4] == '\0')
-            {
-                WOUT("A simple shell.\n");
-            }
-            else
-            {
-                PRINT_ERROR_MESSAGE;
-            }
+            WOUT("A simple shell.\n");
         }
-        else if (strncmp(line, "path", 4) == 0)
+        else if ((strlen(line) == 4 && strncmp(line, "path", 4) == 0)
+                || strncmp(line, "path ", 5)==0)   /* "path" or "path <paths>" */
         {
             /* clear previous path if exists */
             int _i = 0;
@@ -160,7 +148,7 @@ void run_shell(char *batch)
             }
             environment.paths[path_sep_num] = strdup("");
         }
-        else if (strncmp(line, "cd", 2) == 0)
+        else if (strncmp(line, "cd ", 3) == 0)
         {
             char *new_dir = line + 3;
             DIR *dir = opendir(new_dir);
