@@ -63,25 +63,59 @@ void parse_command(char *line, Environment *environment)
             continue;
         free(cur_command);
 
+        /* pipe */
+        /* TODO */
+
         /* redirection */
+        handle_redirection(single_commands[_i], process, process_num, environment);
+
+
+        /* ready for a new process */
+        ++process_num;
+
+        /* free memory */
+
+    }
+
+    chdir(environment->cwd); /* test7: prevent cwd changed by external sh */
+    run_processes(process, process_num);
+
+    /* free memory */
+    for (int _i = 0; _i < single_command_num; ++_i){
+        free(single_commands[_i]);
+    }
+    free(single_commands);
+    for (int _i = 0; _i < process_num; ++_i){
+        for (int _j = 0; _j < process[_i].argc; ++_j){
+            free(process[_i].argv[_j]);
+        }
+        free(process[_i].argv);
+        free(process[_i].exec_path);
+    }
+    free(process);
+}
+
+void handle_redirection(char* line, struct Process process[], int process_num, struct Environment* environment)
+{
+        char *token;
         char command_noredi[MAX_COMMAND_NOREDI];
         char redi_outfile[MAX_REDIFILE];
         char redi_infile[MAX_REDIFILE];
         enum REDIRECTION_TYPE redi_type;
 
 
-        if(3 == sscanf(single_commands[_i], "%[^\t\n<>] > %[^\t\n<>] < %[^\t\n<>]",
+        if(3 == sscanf(line, "%[^\t\n<>] > %[^\t\n<>] < %[^\t\n<>]",
                      command_noredi, redi_outfile, redi_infile)){
             redi_type = REDI_OUT_IN;
         }
-        else if(3 == sscanf(single_commands[_i], "%[^\t\n<>] < %[^\t\n<>] > %[^\t\n<>]",
+        else if(3 == sscanf(line, "%[^\t\n<>] < %[^\t\n<>] > %[^\t\n<>]",
                      command_noredi, redi_infile, redi_outfile)){
             redi_type = REDI_IN_OUT;
         }
-        else if(2 == sscanf(single_commands[_i], "%[^\t\n<>] < %[^\t\n<>]", command_noredi, redi_infile)){
+        else if(2 == sscanf(line, "%[^\t\n<>] < %[^\t\n<>]", command_noredi, redi_infile)){
             redi_type = REDI_IN;
         }
-        else if(2 == sscanf(single_commands[_i], "%[^\t\n<>] > %[^\t\n<>]", command_noredi, redi_outfile)){
+        else if(2 == sscanf(line, "%[^\t\n<>] > %[^\t\n<>]", command_noredi, redi_outfile)){
             redi_type = REDI_OUT;
         }
         else{
@@ -148,34 +182,10 @@ void parse_command(char *line, Environment *environment)
                 free(full_path);
             }
         }
-
-        /* ready for a new process */
-        ++process_num;
-
-        /* free memory */
-
-    }
-
-    chdir(environment->cwd); /* test7: prevent cwd changed by external sh */
-    run_processes(process, process_num);
-
-    /* free memory */
-    for (int _i = 0; _i < single_command_num; ++_i){
-        free(single_commands[_i]);
-    }
-    free(single_commands);
-    for (int _i = 0; _i < process_num; ++_i){
-        for (int _j = 0; _j < process[_i].argc; ++_j){
-            free(process[_i].argv[_j]);
-        }
-        free(process[_i].argv);
-        free(process[_i].exec_path);
-    }
-    free(process);
 }
 
 /* run all processes and wait for them to finnish */
-void run_processes(struct Process process[], int process_num)
+void run_processes(struct Process process[], const int process_num )
 {
     pid_t pid = 0, wpid;
     int wait_status;
