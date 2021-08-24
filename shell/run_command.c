@@ -23,7 +23,8 @@ void parse_command(char *line, Environment *environment)
     //Process process[MAX_PIDS] = {0}; /* TROUBLESHOOTING: must initialize or will reuse */
     /* allocation and initialization of Process */
     Process *process = malloc(sizeof(Process) * MAX_PIDS);
-    for(int _i = 0; _i < MAX_PIDS; ++_i){
+    for (int _i = 0; _i < MAX_PIDS; ++_i)
+    {
         process[_i].argc = 0;
         process[_i].argv = NULL;
         process[_i].exec_path = NULL;
@@ -38,7 +39,7 @@ void parse_command(char *line, Environment *environment)
     line = clean(line);
 
     /* parse "&" */
-    char **single_commands = malloc(sizeof(char*) * MAX_ARGUMENTS_NUM);
+    char **single_commands = malloc(sizeof(char *) * MAX_ARGUMENTS_NUM);
     int single_command_num = 0;
     char *token = strtok(line, "&");
     while (token != NULL)
@@ -64,29 +65,34 @@ void parse_command(char *line, Environment *environment)
         free(cur_command);
 
         /* pipe */
-        /* TODO */
+        char *pipe_res = handle_pipe(single_commands[_i], environment, TRUE);
+        if (pipe_res == NULL)
+        { /* has pipe, already handled */
+            continue;
+        }
 
         /* redirection */
-        handle_redirection(single_commands[_i], process, process_num, environment);
-
+        handle_redirection(pipe_res, process, process_num, environment);
 
         /* ready for a new process */
         ++process_num;
 
         /* free memory */
-
     }
 
     chdir(environment->cwd); /* test7: prevent cwd changed by external sh */
     run_processes(process, process_num);
 
     /* free memory */
-    for (int _i = 0; _i < single_command_num; ++_i){
+    for (int _i = 0; _i < single_command_num; ++_i)
+    {
         free(single_commands[_i]);
     }
     free(single_commands);
-    for (int _i = 0; _i < process_num; ++_i){
-        for (int _j = 0; _j < process[_i].argc; ++_j){
+    for (int _i = 0; _i < process_num; ++_i)
+    {
+        for (int _j = 0; _j < process[_i].argc; ++_j)
+        {
             free(process[_i].argv[_j]);
         }
         free(process[_i].argv);
@@ -95,97 +101,230 @@ void parse_command(char *line, Environment *environment)
     free(process);
 }
 
-void handle_redirection(char* line, struct Process process[], int process_num, struct Environment* environment)
+int fd[2];  /* fd[0]: read end, fd[1] write end */
+
+/* ref: https://www.geeksforgeeks.org/pipe-system-call/ */
+char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
 {
-        char *token;
-        char command_noredi[MAX_COMMAND_NOREDI];
-        char redi_outfile[MAX_REDIFILE];
-        char redi_infile[MAX_REDIFILE];
-        enum REDIRECTION_TYPE redi_type;
-
-
-        if(3 == sscanf(line, "%[^\t\n<>] > %[^\t\n<>] < %[^\t\n<>]",
-                     command_noredi, redi_outfile, redi_infile)){
-            redi_type = REDI_OUT_IN;
-        }
-        else if(3 == sscanf(line, "%[^\t\n<>] < %[^\t\n<>] > %[^\t\n<>]",
-                     command_noredi, redi_infile, redi_outfile)){
-            redi_type = REDI_IN_OUT;
-        }
-        else if(2 == sscanf(line, "%[^\t\n<>] < %[^\t\n<>]", command_noredi, redi_infile)){
-            redi_type = REDI_IN;
-        }
-        else if(2 == sscanf(line, "%[^\t\n<>] > %[^\t\n<>]", command_noredi, redi_outfile)){
-            redi_type = REDI_OUT;
+    pid_t pid;
+    int wait_status;
+    char *first_command = clean(strtok(line, "|")); /* get first command */
+    char *leftover = clean(strtok(NULL, ""));       /* get the remaining part of command */
+    if (!leftover)
+        if(leader){ /* no pipe, return original command */
+            return first_command;
         }
         else{
-            redi_type = NO_REDI;
+            /* end of pipe */
+
+            handle_redirection_exec(first_command,  environment);
+            return NULL;
         }
 
-        process[process_num].redirected=redi_type;
-        if(redi_type & REDI_OUT_MASK){
-            process[process_num].redi_outfd = open(redi_outfile, O_WRONLY | O_CREAT, 0666);
-        }
-        if(redi_type & REDI_IN_MASK){
-            process[process_num].redi_infd = open(redi_infile, O_RDONLY, 0444);
-        }
-
-        /* arguments */
-        process[process_num].argv = malloc(sizeof(char *) * MAX_ARGUMENTS_NUM);
-        process[process_num].argv[0] = '\0';
-        process[process_num].argc = 0;
-
-        token = strtok(clean(command_noredi), " ");
-        while (token != NULL)
+    else
+    { /* piped commands */
+        if (pipe(&fd[0]))
         {
-            process[process_num].argv[process[process_num].argc++] = strdup(token);
-            token = strtok(NULL, " ");
+            WERR("Unable to establish a pipe...\n");
+            return NULL;
         }
+        if ((pid = fork()) == 0)
+        {                 /* child process, execute directly */
+            close(fd[0]); //管道输入前，先关闭管道输出，互斥
 
-        /* find path for command */
-        if (access(process[process_num].argv[0], X_OK) == 0) /* absolute path given */
-        {
-            process[process_num].exec_path = strdup(process[process_num].argv[0]);
-        }
-
-        else /* finding from environment paths */
-        {
-#ifdef DEBUG
-            for (int i = 0; environment->paths[i] && environment->paths[i][0] != '\0'; ++i)
-            {
-                printf("Env: %d %s\n", i, environment->paths[i]);
+            
+            if(-1 == dup2(fd[1], fileno(stdout))){
+                WERR("Unable to duplicate stdout in handle_pipe.\n");
             }
-#endif
-            int path_i = 0;
-            while (environment->paths[path_i] != NULL && environment->paths[path_i][0] != '\0')
-            {
+            
+
+            close(fd[1]);
+            handle_redirection_exec(first_command, environment);
+            return NULL;
+        }
+        else
+        {                 /* parent process, execute remaining processes */
+            
+            close(fd[1]); //管道输出前，先关闭管道输入，互斥
+
+            if(-1 == dup2(fd[0], fileno(stdin))){
+                WERR("Unable to duplicate stdin in handle_pipe.\n");
+            }
+
+            close(fd[0]);
+            waitpid(pid, &wait_status, 0);
+            handle_pipe(leftover, environment, FALSE); // recursion
+        }
+    }
+}
+
+/* handle redirection and execute */
+void handle_redirection_exec(char *line, struct Environment *environment)
+{
+    struct Process *process = malloc(sizeof(Process));
+
+    process[0].argc = 0;
+    process[0].argv = NULL;
+    process[0].exec_path = NULL;
+    process[0].pid = -1;
+    process[0].redirected = NO_REDI;
+    process[0].redi_infd = -1;
+    process[0].redi_outfd = -1;
+
+    handle_redirection(line, process, 0, environment);
+    chdir(environment->cwd);
+    run_process(process);
+
+    for (int _j = 0; _j < process[0].argc; ++_j)
+    {
+        free(process[0].argv[_j]);
+    }
+    free(process[0].argv);
+    free(process[0].exec_path);
+    
+    free(process);
+}
+
+/* handle redirection and save parsed info to `process[]` */
+void handle_redirection(char *line, struct Process process[], int process_num, struct Environment *environment)
+{
+    char *token;
+    char command_noredi[MAX_COMMAND_NOREDI];
+    char redi_outfile[MAX_REDIFILE];
+    char redi_infile[MAX_REDIFILE];
+    enum REDIRECTION_TYPE redi_type;
+
+    if (3 == sscanf(line, "%[^\t\n<>] > %[^\t\n<>] < %[^\t\n<>]",
+                    command_noredi, redi_outfile, redi_infile))
+    {
+        redi_type |= REDI_OUT_IN;
+    }
+    else if (3 == sscanf(line, "%[^\t\n<>] < %[^\t\n<>] > %[^\t\n<>]",
+                         command_noredi, redi_infile, redi_outfile))
+    {
+        redi_type |= REDI_IN_OUT;
+    }
+    else if (2 == sscanf(line, "%[^\t\n<>] < %[^\t\n<>]", command_noredi, redi_infile))
+    {
+        redi_type |= REDI_IN;
+    }
+    else if (2 == sscanf(line, "%[^\t\n<>] > %[^\t\n<>]", command_noredi, redi_outfile))
+    {
+        redi_type |= REDI_OUT;
+    }
+    else
+    {
+        redi_type |= NO_REDI;
+    }
+
+    process[process_num].redirected = redi_type;
+    if ((redi_type & REDI_OUT_MASK) && process[process_num].redi_outfd ==-1)
+    {
+        process[process_num].redi_outfd = open(redi_outfile, O_WRONLY | O_CREAT, 0666);
+    }
+    if ((redi_type & REDI_IN_MASK) && process[process_num].redi_infd ==-1)
+    {
+        process[process_num].redi_infd = open(redi_infile, O_RDONLY, 0444);
+    }
+
+    /* arguments */
+    process[process_num].argv = malloc(sizeof(char *) * MAX_ARGUMENTS_NUM);
+    process[process_num].argv[0] = '\0';
+    process[process_num].argc = 0;
+
+    token = strtok(clean(command_noredi), " ");
+    while (token != NULL)
+    {
+        process[process_num].argv[process[process_num].argc++] = strdup(token);
+        token = strtok(NULL, " ");
+    }
+
+    /* find path for command */
+    if (access(process[process_num].argv[0], X_OK) == 0) /* absolute path given */
+    {
+        process[process_num].exec_path = strdup(process[process_num].argv[0]);
+    }
+
+    else /* finding from environment paths */
+    {
 #ifdef DEBUG
-                printf("proc %d %s\n", process_num, process[process_num].argv[0]);
+        for (int i = 0; environment->paths[i] && environment->paths[i][0] != '\0'; ++i)
+        {
+            printf("Env: %d %s\n", i, environment->paths[i]);
+        }
 #endif
-                /* https://stackoverflow.com/questions/12591074
+        int path_i = 0;
+        while (environment->paths[path_i] != NULL && environment->paths[path_i][0] != '\0')
+        {
+#ifdef DEBUG
+            printf("proc %d %s\n", process_num, process[process_num].argv[0]);
+#endif
+            /* https://stackoverflow.com/questions/12591074
                     /is-there-a-neat-way-to-do-strdup-followed-by-strcat */
-                char *full_path = (char*)malloc( sizeof(char) * 
-                    (strlen(environment->paths[path_i]) + MAX_EXEC_FILENAME) ) ;
-                strcpy(full_path, environment->paths[path_i]);
-                if (full_path[strlen(full_path) - 1] != '/')
-                {
-                    strcat(full_path, "/");
-                }
-                strcat(full_path, process[process_num].argv[0]);
-
-                if (access(full_path, X_OK) == 0)
-                {
-                    process[process_num].exec_path = strdup(full_path);
-                    break;
-                }
-                path_i++;
-                free(full_path);
+            char *full_path = (char *)malloc(sizeof(char) *
+                                             (strlen(environment->paths[path_i]) + MAX_EXEC_FILENAME));
+            strcpy(full_path, environment->paths[path_i]);
+            if (full_path[strlen(full_path) - 1] != '/')
+            {
+                strcat(full_path, "/");
             }
+            strcat(full_path, process[process_num].argv[0]);
+
+            if (access(full_path, X_OK) == 0)
+            {
+                process[process_num].exec_path = strdup(full_path);
+                break;
+            }
+            path_i++;
+            free(full_path);
         }
+    }
+}
+
+/* run a single process */
+void run_process(struct Process *process)
+{ 
+    
+            if (process->redirected & REDI_OUT_MASK)
+            { /* handle redirection */
+                if (!(process->redirected & REDI_PIPE_MASK)){ /* pipe shouldn't dup stderr */
+                    if (-1 == dup2(process->redi_outfd, fileno(stderr)))
+                    {
+                        WERR("Unable to duplicate stderr in run_processes.\n");
+                        exit(1);
+                    }
+                }
+                /* close(1)  i.e. STDOUT is done by dup2 */
+                if (-1 == dup2(process->redi_outfd, fileno(stdout)))
+                {
+                    WERR("Unable to duplicate stdout in run_processes.\n")
+                    exit(1);
+                }
+#ifdef DEBUG
+                printf("dup2 stdout and stderr...\n");
+#endif
+            }
+            if (process->redirected & REDI_IN_MASK)
+            { /* handle redirection */
+                if (-1 == dup2(process->redi_infd, fileno(stdin)))
+                {
+#ifdef DEBUG
+                    printf("dup2 stdin...\n");
+#endif
+                    WERR("Unable to duplicate stdin in run_processes.\n")
+                    exit(1);
+                }
+            }
+            execv(process->exec_path, process->argv);
+            WERR("Unable to execv in run_processes.\n");
+#ifdef DEBUG
+            printf("execv didn't work.\n");
+#endif
+            exit(EXIT_EXEC); /* something went wrong executing subprocess */
 }
 
 /* run all processes and wait for them to finnish */
-void run_processes(struct Process process[], const int process_num )
+void run_processes(struct Process process[], const int process_num)
 {
     pid_t pid = 0, wpid;
     int wait_status;
@@ -199,7 +338,7 @@ void run_processes(struct Process process[], const int process_num )
 
         if (pid < 0)
         {
-            PRINT_ERROR_MESSAGE;
+            WERR("Unable to fork in run_processes.\n");
             exit(1);
         }
 
@@ -210,37 +349,39 @@ void run_processes(struct Process process[], const int process_num )
 #endif
             if (process[number].redirected & REDI_OUT_MASK)
             { /* handle redirection */
-                if (-1 == dup2(process[number].redi_outfd, fileno(stderr)))
-                {
-                    PRINT_ERROR_MESSAGE;
-                    exit(1);
+                if (!(process[number].redirected & REDI_PIPE_MASK)){ /* pipe shouldn't dup stderr */
+                    if (-1 == dup2(process[number].redi_outfd, fileno(stderr)))
+                    {
+                        WERR("Unable to duplicate stderr in run_processes.\n");
+                        exit(1);
+                    }
                 }
                 /* close(1)  i.e. STDOUT is done by dup2 */
                 if (-1 == dup2(process[number].redi_outfd, fileno(stdout)))
                 {
-                    PRINT_ERROR_MESSAGE;
+                    WERR("Unable to duplicate stdout in run_processes.\n")
                     exit(1);
                 }
-                #ifdef DEBUG
-                    printf("dup2 stdout and stderr...\n");
-                #endif
+#ifdef DEBUG
+                printf("dup2 stdout and stderr...\n");
+#endif
             }
             if (process[number].redirected & REDI_IN_MASK)
             { /* handle redirection */
                 if (-1 == dup2(process[number].redi_infd, fileno(stdin)))
                 {
-                    #ifdef DEBUG
+#ifdef DEBUG
                     printf("dup2 stdin...\n");
-                    #endif
-                    PRINT_ERROR_MESSAGE;
+#endif
+                    WERR("Unable to duplicate stdin in run_processes.\n")
                     exit(1);
                 }
             }
             execv(process[number].exec_path, process[number].argv);
-            PRINT_ERROR_MESSAGE;
-            #ifdef DEBUG
+            WERR("Unable to execv in run_processes.\n");
+#ifdef DEBUG
             printf("execv didn't work.\n");
-            #endif
+#endif
             exit(EXIT_EXEC); /* something went wrong executing subprocess */
         }
     }

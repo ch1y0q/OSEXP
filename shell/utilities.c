@@ -8,6 +8,7 @@
 /* clean redundant space and tab before command and arguments */
 char *clean(char *line)
 {
+    if(!line) return NULL;
     size_t len = strlen(line), i = 0;
     int character = 0;
     int lastNonSpace = -1;
