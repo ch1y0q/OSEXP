@@ -12,7 +12,7 @@
 #include "run_command.h"
 #include "utilities.h"
 #include "structures.h"
-
+#define DEBUG
 void run_command(char *line, Environment *environment)
 {
     parse_command(line, environment);
@@ -101,7 +101,7 @@ void parse_command(char *line, Environment *environment)
     free(process);
 }
 
-int fd[2];  /* fd[0]: read end, fd[1] write end */
+int fd[2]; /* fd[0]: read end, fd[1] write end */
 
 /* ref: https://www.geeksforgeeks.org/pipe-system-call/ */
 char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
@@ -111,14 +111,22 @@ char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
     char *first_command = clean(strtok(line, "|")); /* get first command */
     char *leftover = clean(strtok(NULL, ""));       /* get the remaining part of command */
     if (!leftover)
-        if(leader){ /* no pipe, return original command */
+        if (leader)
+        { /* no pipe, return original command */
             return first_command;
         }
-        else{
+        else
+        {
             /* end of pipe */
-
-            handle_redirection_exec(first_command,  environment);
-            return NULL;
+            if ((pid = fork()) == 0)
+            { /* child */
+                handle_redirection_exec(first_command, environment);
+            }
+            else
+            { /* parent */
+                waitpid(pid, &wait_status, 0);
+                return NULL;
+            }
         }
 
     else
@@ -132,22 +140,22 @@ char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
         {                 /* child process, execute directly */
             close(fd[0]); //管道输入前，先关闭管道输出，互斥
 
-            
-            if(-1 == dup2(fd[1], fileno(stdout))){
+            if (-1 == dup2(fd[1], fileno(stdout)))
+            {
                 WERR("Unable to duplicate stdout in handle_pipe.\n");
             }
-            
 
             close(fd[1]);
             handle_redirection_exec(first_command, environment);
             return NULL;
         }
         else
-        {                 /* parent process, execute remaining processes */
-            
+        { /* parent process, execute remaining processes */
+
             close(fd[1]); //管道输出前，先关闭管道输入，互斥
 
-            if(-1 == dup2(fd[0], fileno(stdin))){
+            if (-1 == dup2(fd[0], fileno(stdin)))
+            {
                 WERR("Unable to duplicate stdin in handle_pipe.\n");
             }
 
@@ -161,28 +169,28 @@ char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
 /* handle redirection and execute */
 void handle_redirection_exec(char *line, struct Environment *environment)
 {
-    struct Process *process = malloc(sizeof(Process));
+    struct Process process = {
+        .argc = 0,
+        .argv = NULL,
+        .exec_path = NULL,
+        .pid = -1,
+        .redirected = NO_REDI,
+        .redi_infd = -1,
+        .redi_outfd = -1,
+    };
 
-    process[0].argc = 0;
-    process[0].argv = NULL;
-    process[0].exec_path = NULL;
-    process[0].pid = -1;
-    process[0].redirected = NO_REDI;
-    process[0].redi_infd = -1;
-    process[0].redi_outfd = -1;
-
-    handle_redirection(line, process, 0, environment);
+    handle_redirection(line, &process, 0, environment);
     chdir(environment->cwd);
-    run_process(process);
+    run_process(&process);
 
-    for (int _j = 0; _j < process[0].argc; ++_j)
+    /* won't run */
+    /* memory leakage here */
+    for (int _j = 0; _j < process.argc; ++_j)
     {
-        free(process[0].argv[_j]);
+        free(process.argv[_j]);
     }
-    free(process[0].argv);
-    free(process[0].exec_path);
-    
-    free(process);
+    free(process.argv);
+    free(process.exec_path);
 }
 
 /* handle redirection and save parsed info to `process[]` */
@@ -218,11 +226,11 @@ void handle_redirection(char *line, struct Process process[], int process_num, s
     }
 
     process[process_num].redirected = redi_type;
-    if ((redi_type & REDI_OUT_MASK) && process[process_num].redi_outfd ==-1)
+    if ((redi_type & REDI_OUT_MASK) && process[process_num].redi_outfd == -1)
     {
         process[process_num].redi_outfd = open(redi_outfile, O_WRONLY | O_CREAT, 0666);
     }
-    if ((redi_type & REDI_IN_MASK) && process[process_num].redi_infd ==-1)
+    if ((redi_type & REDI_IN_MASK) && process[process_num].redi_infd == -1)
     {
         process[process_num].redi_infd = open(redi_infile, O_RDONLY, 0444);
     }
@@ -283,44 +291,45 @@ void handle_redirection(char *line, struct Process process[], int process_num, s
 
 /* run a single process */
 void run_process(struct Process *process)
-{ 
-    
-            if (process->redirected & REDI_OUT_MASK)
-            { /* handle redirection */
-                if (!(process->redirected & REDI_PIPE_MASK)){ /* pipe shouldn't dup stderr */
-                    if (-1 == dup2(process->redi_outfd, fileno(stderr)))
-                    {
-                        WERR("Unable to duplicate stderr in run_processes.\n");
-                        exit(1);
-                    }
-                }
-                /* close(1)  i.e. STDOUT is done by dup2 */
-                if (-1 == dup2(process->redi_outfd, fileno(stdout)))
-                {
-                    WERR("Unable to duplicate stdout in run_processes.\n")
-                    exit(1);
-                }
-#ifdef DEBUG
-                printf("dup2 stdout and stderr...\n");
-#endif
+{
+
+    if (process->redirected & REDI_OUT_MASK)
+    { /* handle redirection */
+        if (!(process->redirected & REDI_PIPE_MASK))
+        { /* pipe shouldn't dup stderr */
+            if (-1 == dup2(process->redi_outfd, fileno(stderr)))
+            {
+                WERR("Unable to duplicate stderr in run_processes.\n");
+                exit(1);
             }
-            if (process->redirected & REDI_IN_MASK)
-            { /* handle redirection */
-                if (-1 == dup2(process->redi_infd, fileno(stdin)))
-                {
+        }
+        /* close(1)  i.e. STDOUT is done by dup2 */
+        if (-1 == dup2(process->redi_outfd, fileno(stdout)))
+        {
+            WERR("Unable to duplicate stdout in run_processes.\n")
+            exit(1);
+        }
 #ifdef DEBUG
-                    printf("dup2 stdin...\n");
+        printf("dup2 stdout and stderr...\n");
 #endif
-                    WERR("Unable to duplicate stdin in run_processes.\n")
-                    exit(1);
-                }
-            }
-            execv(process->exec_path, process->argv);
-            WERR("Unable to execv in run_processes.\n");
+    }
+    if (process->redirected & REDI_IN_MASK)
+    { /* handle redirection */
+        if (-1 == dup2(process->redi_infd, fileno(stdin)))
+        {
 #ifdef DEBUG
-            printf("execv didn't work.\n");
+            printf("dup2 stdin...\n");
 #endif
-            exit(EXIT_EXEC); /* something went wrong executing subprocess */
+            WERR("Unable to duplicate stdin in run_processes.\n")
+            exit(1);
+        }
+    }
+    execv(process->exec_path, process->argv);
+    WERR("Unable to execv in run_processes.\n");
+#ifdef DEBUG
+    printf("execv didn't work.\n");
+#endif
+    exit(EXIT_EXEC); /* something went wrong executing subprocess */
 }
 
 /* run all processes and wait for them to finnish */
@@ -349,7 +358,8 @@ void run_processes(struct Process process[], const int process_num)
 #endif
             if (process[number].redirected & REDI_OUT_MASK)
             { /* handle redirection */
-                if (!(process[number].redirected & REDI_PIPE_MASK)){ /* pipe shouldn't dup stderr */
+                if (!(process[number].redirected & REDI_PIPE_MASK))
+                { /* pipe shouldn't dup stderr */
                     if (-1 == dup2(process[number].redi_outfd, fileno(stderr)))
                     {
                         WERR("Unable to duplicate stderr in run_processes.\n");
