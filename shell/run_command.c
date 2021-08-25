@@ -20,7 +20,6 @@ void run_command(char *line, Environment *environment)
 
 void parse_command(char *line, Environment *environment)
 {
-    //Process process[MAX_PIDS] = {0}; /* TROUBLESHOOTING: must initialize or will reuse */
     /* allocation and initialization of Process */
     Process *process = malloc(sizeof(Process) * MAX_PIDS);
     for (int _i = 0; _i < MAX_PIDS; ++_i)
@@ -103,21 +102,21 @@ void parse_command(char *line, Environment *environment)
     free(process);
 }
 
-
 /* ref: https://www.geeksforgeeks.org/pipe-system-call/ */
 char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
 {
-    #ifdef DEBUG
-        printf("handle_pipe called, line=%s, leader=%d...\n", line, leader);
-    #endif
+#ifdef DEBUG
+    printf("handle_pipe called, line=%s, leader=%d...\n", line, leader);
+#endif
     pid_t pid;
     int wait_status;
     char *first_command = clean(strtok(line, "|")); /* get first command */
     char *leftover = clean(strtok(NULL, ""));       /* get the remaining part of command */
-    #ifdef DEBUG
-        printf("first_command=%s, leftover=%s...\n", first_command, leftover);
-    #endif
-    if (!first_command){
+#ifdef DEBUG
+    printf("first_command=%s, leftover=%s...\n", first_command, leftover);
+#endif
+    if (!first_command)
+    {
         return NULL;
     }
     if (!leftover)
@@ -127,9 +126,9 @@ char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
         }
         else
         {
-                #ifdef DEBUG
-                printf("!leftover\n");
-                #endif
+#ifdef DEBUG
+            printf("!leftover\n");
+#endif
             if (pipe(&fd[0]))
             {
                 WERR("Unable to establish a pipe...\n");
@@ -143,16 +142,17 @@ char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
                 //close(fd[1]);
                 handle_redirection_exec(first_command, environment);
             }
-            else if(pid < 0){
+            else if (pid < 0)
+            {
                 WERR("Unable to fork...\n");
                 return NULL;
             }
             else
             { /* parent */
                 waitpid(-1, &wait_status, 0);
-                #ifdef DEBUG
+#ifdef DEBUG
                 printf("Finish waiting last pipe...\n");
-                #endif
+#endif
 
                 //close(fd[1]);
                 //close(fd[0]);
@@ -182,7 +182,8 @@ char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
             handle_redirection_exec(first_command, environment);
             //return NULL;
         }
-        else if(pid < 0){
+        else if (pid < 0)
+        {
             WERR("Unable to fork...\n");
         }
         else
@@ -197,9 +198,9 @@ char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
 
             close(fd[0]);
             waitpid(-1, &wait_status, 0);
-            #ifdef DEBUG
-                printf("Finish waiting pipe...\n");
-            #endif
+#ifdef DEBUG
+            printf("Finish waiting pipe...\n");
+#endif
             return handle_pipe(leftover, environment, FALSE); // recursion
         }
     }
@@ -277,7 +278,8 @@ void handle_redirection(char *line, struct Process process[], int process_num, s
     /* arguments */
     process[process_num].argv = malloc(sizeof(char *) * MAX_ARGUMENTS_NUM);
     process[process_num].argc = 0;
-    for(int _i = 0; _i < MAX_ARGUMENTS_NUM; ++_i){
+    for (int _i = 0; _i < MAX_ARGUMENTS_NUM; ++_i)
+    {
         process[process_num].argv[_i] = NULL;
     }
 

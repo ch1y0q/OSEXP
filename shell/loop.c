@@ -11,7 +11,7 @@
 #include "run_command.h"
 
 
-void print_promt(struct Environment *environment)
+void print_prompt(struct Environment *environment)
 {
     char str[2048]="";
     char buf[1024];
@@ -55,7 +55,7 @@ char *getNextLine(FILE *batchFile, struct Environment* environment)
     size_t len = 0;
     if (batchFile == NULL)  /* read from stdin */
     {
-        print_promt(environment);
+        print_prompt(environment);
         while (getline(&line, &len, stdin) == -1)
         {
             /* wait for input */

@@ -6,6 +6,28 @@
 
 #IncludeRegexTransform: 
 
+/home/qiyue2001/code/OSEXP/shell/loop.c
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+unistd.h
+-
+dirent.h
+-
+macros.h
+/home/qiyue2001/code/OSEXP/shell/macros.h
+structures.h
+/home/qiyue2001/code/OSEXP/shell/structures.h
+utilities.h
+/home/qiyue2001/code/OSEXP/shell/utilities.h
+run_command.h
+/home/qiyue2001/code/OSEXP/shell/run_command.h
+
+/home/qiyue2001/code/OSEXP/shell/loop.h
+
 /home/qiyue2001/code/OSEXP/shell/macros.h
 
 /home/qiyue2001/code/OSEXP/shell/run_command.c
@@ -38,6 +60,20 @@ structures.h
 structures.h
 /home/qiyue2001/code/OSEXP/shell/structures.h
 
+/home/qiyue2001/code/OSEXP/shell/seush.c
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+unistd.h
+-
+loop.h
+/home/qiyue2001/code/OSEXP/shell/loop.h
+macros.h
+/home/qiyue2001/code/OSEXP/shell/macros.h
+
 /home/qiyue2001/code/OSEXP/shell/structures.h
 linux/limits.h
 -
@@ -47,6 +83,16 @@ sys/types.h
 -
 stdio.h
 -
+macros.h
+/home/qiyue2001/code/OSEXP/shell/macros.h
+
+/home/qiyue2001/code/OSEXP/shell/utilities.c
+stdlib.h
+-
+string.h
+-
+structures.h
+/home/qiyue2001/code/OSEXP/shell/structures.h
 macros.h
 /home/qiyue2001/code/OSEXP/shell/macros.h
 

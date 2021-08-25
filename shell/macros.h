@@ -4,7 +4,6 @@
 #define MACROS_H
 
 /* debug */
-//#define DEBUG
 #define WERR(x) write(STDERR_FILENO, x, strlen(x));
 #define WOUT(x) write(STDOUT_FILENO, x, strlen(x));
 
