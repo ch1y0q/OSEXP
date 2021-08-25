@@ -12,7 +12,7 @@
 #include "run_command.h"
 #include "utilities.h"
 #include "structures.h"
-#define DEBUG
+//#define DEBUG
 void run_command(char *line, Environment *environment)
 {
     parse_command(line, environment);
@@ -65,6 +65,8 @@ void parse_command(char *line, Environment *environment)
         free(cur_command);
 
         /* pipe */
+        save_in = dup(STDIN_FILENO);
+        save_out = dup(STDOUT_FILENO);
         char *pipe_res = handle_pipe(single_commands[_i], environment, TRUE);
         if (pipe_res == NULL)
         { /* has pipe, already handled */
@@ -101,15 +103,23 @@ void parse_command(char *line, Environment *environment)
     free(process);
 }
 
-int fd[2]; /* fd[0]: read end, fd[1] write end */
 
 /* ref: https://www.geeksforgeeks.org/pipe-system-call/ */
 char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
 {
+    #ifdef DEBUG
+        printf("handle_pipe called, line=%s, leader=%d...\n", line, leader);
+    #endif
     pid_t pid;
     int wait_status;
     char *first_command = clean(strtok(line, "|")); /* get first command */
     char *leftover = clean(strtok(NULL, ""));       /* get the remaining part of command */
+    #ifdef DEBUG
+        printf("first_command=%s, leftover=%s...\n", first_command, leftover);
+    #endif
+    if (!first_command){
+        return NULL;
+    }
     if (!leftover)
         if (leader)
         { /* no pipe, return original command */
@@ -117,14 +127,36 @@ char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
         }
         else
         {
+                #ifdef DEBUG
+                printf("!leftover\n");
+                #endif
+            if (pipe(&fd[0]))
+            {
+                WERR("Unable to establish a pipe...\n");
+                return NULL;
+            }
             /* end of pipe */
-            if ((pid = fork()) == 0)
+            pid = fork();
+            if (pid == 0)
             { /* child */
+                //close(fd[0]);
+                //close(fd[1]);
                 handle_redirection_exec(first_command, environment);
+            }
+            else if(pid < 0){
+                WERR("Unable to fork...\n");
+                return NULL;
             }
             else
             { /* parent */
-                waitpid(pid, &wait_status, 0);
+                waitpid(-1, &wait_status, 0);
+                #ifdef DEBUG
+                printf("Finish waiting last pipe...\n");
+                #endif
+
+                //close(fd[1]);
+                //close(fd[0]);
+                dup2(save_in, STDIN_FILENO);
                 return NULL;
             }
         }
@@ -136,32 +168,39 @@ char *handle_pipe(char *line, struct Environment *environment, BOOL leader)
             WERR("Unable to establish a pipe...\n");
             return NULL;
         }
-        if ((pid = fork()) == 0)
+        pid = fork();
+        if (pid == 0)
         {                 /* child process, execute directly */
             close(fd[0]); //管道输入前，先关闭管道输出，互斥
-
-            if (-1 == dup2(fd[1], fileno(stdout)))
+            close(STDOUT_FILENO);
+            if (-1 == dup(fd[1]))
             {
                 WERR("Unable to duplicate stdout in handle_pipe.\n");
             }
 
             close(fd[1]);
             handle_redirection_exec(first_command, environment);
-            return NULL;
+            //return NULL;
+        }
+        else if(pid < 0){
+            WERR("Unable to fork...\n");
         }
         else
         { /* parent process, execute remaining processes */
-
+            /* set up pipe for next process */
             close(fd[1]); //管道输出前，先关闭管道输入，互斥
-
-            if (-1 == dup2(fd[0], fileno(stdin)))
+            close(STDIN_FILENO);
+            if (-1 == dup(fd[0]))
             {
                 WERR("Unable to duplicate stdin in handle_pipe.\n");
             }
 
             close(fd[0]);
-            waitpid(pid, &wait_status, 0);
-            handle_pipe(leftover, environment, FALSE); // recursion
+            waitpid(-1, &wait_status, 0);
+            #ifdef DEBUG
+                printf("Finish waiting pipe...\n");
+            #endif
+            return handle_pipe(leftover, environment, FALSE); // recursion
         }
     }
 }
@@ -184,7 +223,7 @@ void handle_redirection_exec(char *line, struct Environment *environment)
     run_process(&process);
 
     /* won't run */
-    /* memory leakage here */
+    /* TODO: memory leakage here */
     for (int _j = 0; _j < process.argc; ++_j)
     {
         free(process.argv[_j]);
@@ -200,7 +239,7 @@ void handle_redirection(char *line, struct Process process[], int process_num, s
     char command_noredi[MAX_COMMAND_NOREDI];
     char redi_outfile[MAX_REDIFILE];
     char redi_infile[MAX_REDIFILE];
-    enum REDIRECTION_TYPE redi_type;
+    enum REDIRECTION_TYPE redi_type = NO_REDI;
 
     if (3 == sscanf(line, "%[^\t\n<>] > %[^\t\n<>] < %[^\t\n<>]",
                     command_noredi, redi_outfile, redi_infile))
@@ -237,8 +276,10 @@ void handle_redirection(char *line, struct Process process[], int process_num, s
 
     /* arguments */
     process[process_num].argv = malloc(sizeof(char *) * MAX_ARGUMENTS_NUM);
-    process[process_num].argv[0] = '\0';
     process[process_num].argc = 0;
+    for(int _i = 0; _i < MAX_ARGUMENTS_NUM; ++_i){
+        process[process_num].argv[_i] = NULL;
+    }
 
     token = strtok(clean(command_noredi), " ");
     while (token != NULL)
@@ -281,6 +322,7 @@ void handle_redirection(char *line, struct Process process[], int process_num, s
             if (access(full_path, X_OK) == 0)
             {
                 process[process_num].exec_path = strdup(full_path);
+                free(full_path);
                 break;
             }
             path_i++;
@@ -290,11 +332,15 @@ void handle_redirection(char *line, struct Process process[], int process_num, s
 }
 
 /* run a single process */
+/* this function doesn't fork! */
 void run_process(struct Process *process)
 {
 
     if (process->redirected & REDI_OUT_MASK)
     { /* handle redirection */
+#ifdef DEBUG
+        printf("process->redirected & REDI_OUT_MASK\n");
+#endif
         if (!(process->redirected & REDI_PIPE_MASK))
         { /* pipe shouldn't dup stderr */
             if (-1 == dup2(process->redi_outfd, fileno(stderr)))
@@ -315,6 +361,9 @@ void run_process(struct Process *process)
     }
     if (process->redirected & REDI_IN_MASK)
     { /* handle redirection */
+#ifdef DEBUG
+        printf("process->redirected & REDI_IN_MASK\n");
+#endif
         if (-1 == dup2(process->redi_infd, fileno(stdin)))
         {
 #ifdef DEBUG

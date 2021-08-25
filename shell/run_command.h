@@ -4,6 +4,9 @@
 
 #include "structures.h"
 
+int fd[2]; /* fd[0]: read end, fd[1] write end */
+int save_in, save_out;
+
 void parse_command(char *, Environment *);
 void run_command(char *, Environment *);
 void run_process(struct Process *process);
