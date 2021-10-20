@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "structures.h": "c"
+        "structures.h": "c",
+        "fs.h": "c",
+        "*.tcc": "c"
     }
 }
