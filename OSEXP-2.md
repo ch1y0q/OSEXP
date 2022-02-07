@@ -79,6 +79,48 @@ graph TD;
 * `enum REDIRECTION_TYPE`：重定向类型的枚举，共包含`NO_REDI=0b0000, REDI_IN=0b0001, REDI_OUT=0b0010, REDI_OUT_IN=0b0011, REDI_IN_OUT=0b0111`。另外掩码`REDI_IN_MASK=1`用于判断有无设定输入重定向，`REDI_OUT_MASK=2`用于判断有无设定输出重定向，`REDI_IN_OUT_ORDER_MASK=4`用于指示在同时有输入重定向和输出重定向时，输入指令时所给的顺序是否为`command < in > out `。
 
 ## 程序运行时的初值和运行结果
+
+测试重定向：
+
+```shell
+ls|grep run>out.txt
+wc -l<out.txt>wc.txt
+cat out.txt
+cat wc.txt
+```
+
+![image-20210907185943086](OSEXP-2.assets/image-20210907185943086.png)
+
+可见，`ls|grep run`的结果被正确的保存到了`out.txt`中。`wc -l`通过输入重定向成功读取了`out.txt`，并将结果成功输出到了`wc.txt`中，结果符合预期。
+
+**测试管道：**
+
+```shell
+ls -l | grep fifo | wc -l
+```
+
+<img src="OSEXP-2.assets/image-20210907184958657.png" alt="image-20210907184958657"  />
+
+可见，当前目录确实不存在文件名含有`fifo`的文件，故计数为0，结果正确。
+
+**测试并行：**
+
+```shell
+echo hi & ls|grep run
+```
+
+![image-20210907185341392](OSEXP-2.assets/image-20210907185341392.png)
+
+可见成功输出了`hi`，并打印了当前目录中含有`run`的文件名。
+
+**测试内置指令：**
+
+使用`cd`更改当前工作路径；使用`path`清空查找可执行程序的目录。
+
+<img src="OSEXP-2.assets/image-20210907185440639.png" alt="image-20210907185440639"  />
+
+可见`cd`成功切换了当前工作目录。`path`清空后，`/bin/ls`无法被找到，符合预期。
+
 ## 实验体会
 
 尽管在上学期的操作系统课程中，我们编写过一个简单的shell，但当时并没有要求实现管道、重定向功能，实现难度较低。本次实验新增的要求让实验难度增加了不少。
